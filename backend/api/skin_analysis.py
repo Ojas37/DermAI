@@ -244,39 +244,49 @@ class DermatologyAnalyzer:
             if cache_key in self._response_cache:
                 return self._response_cache[cache_key]
 
-            model_name = os.getenv('GROQ_MODEL', 'llama-3.1-70b-versatile')
+            candidate_models = [
+                os.getenv('GROQ_MODEL'),
+                'openai/gpt-oss-120b',
+                'openai/gpt-oss-20b',
+                'qwen/qwen3.8-27b',
+                'llama-3.3-70b-versatile',
+                'llama-3.1-8b-instant'
+            ]
+            unique_candidates = [m for m in candidate_models if m]
             try:
-                response = self.groq_client.chat.completions.create(
-                    model=model_name,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "You are a specialized dermatology AI assistant. Analyze the given skin analysis report and provide a detailed, professional interpretation."
-                        },
-                        {
-                            "role": "user",
-                            "content": f"Please analyze this dermatological report and provide a detailed interpretation: {initial_report}"
-                        }
-                    ],
-                    temperature=0.7,
-                    max_tokens=2048
-                )
+                available = [m.id for m in self.groq_client.models.list().data]
+                filtered = [m for m in unique_candidates if m in available]
+                if filtered:
+                    unique_candidates = filtered
             except Exception:
-                response = self.groq_client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "You are a specialized dermatology AI assistant. Analyze the given skin analysis report and provide a detailed, professional interpretation."
-                        },
-                        {
-                            "role": "user",
-                            "content": f"Please analyze this dermatological report and provide a detailed interpretation: {initial_report}"
-                        }
-                    ],
-                    temperature=0.7,
-                    max_tokens=2048
-                )
+                pass
+
+            response = None
+            last_err = None
+            for candidate in unique_candidates:
+                try:
+                    response = self.groq_client.chat.completions.create(
+                        model=candidate,
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are a specialized dermatology AI assistant. Analyze the given skin analysis report and provide a detailed, professional interpretation."
+                            },
+                            {
+                                "role": "user",
+                                "content": f"Please analyze this dermatological report and provide a detailed interpretation: {initial_report}"
+                            }
+                        ],
+                        temperature=0.7,
+                        max_tokens=2048
+                    )
+                    break
+                except Exception as err:
+                    last_err = err
+                    logger.warning(f"Groq skin analysis failed with model {candidate}: {err}")
+
+            if not response:
+                raise last_err or Exception("All available Groq models failed.")
             
             analysis = response.choices[0].message.content
             self._response_cache[cache_key] = analysis

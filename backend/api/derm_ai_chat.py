@@ -51,6 +51,35 @@ class DermAI:
             logger.error(f"Failed to initialize Groq client: {str(e)}")
             return None
 
+    def _get_active_model(self) -> str:
+        """Dynamically detect and return an active text chat model available on the user's Groq key."""
+        preferred = [
+            os.getenv('GROQ_MODEL'),
+            'openai/gpt-oss-120b',
+            'openai/gpt-oss-20b',
+            'qwen/qwen3.8-27b',
+            'llama-3.3-70b-versatile',
+            'llama-3.1-8b-instant',
+            'llama-3.1-70b-versatile'
+        ]
+        preferred = [m for m in preferred if m]
+        if not self.client:
+            return preferred[0] if preferred else 'openai/gpt-oss-120b'
+        try:
+            available_models = [m.id for m in self.client.models.list().data]
+            for m in preferred:
+                if m in available_models:
+                    return m
+            # If none matched, find any text chat model
+            for m in available_models:
+                m_lower = m.lower()
+                if not any(k in m_lower for k in ['whisper', 'guard', 'orpheus', 'tts']):
+                    return m
+            return available_models[0]
+        except Exception as e:
+            logger.warning(f"Error querying Groq models: {e}")
+            return preferred[0] if preferred else 'openai/gpt-oss-120b'
+
     def get_response(self, user_input: str, user_id: str) -> Dict[str, any]:
         """Get AI response for user input."""
         try:
@@ -61,29 +90,40 @@ class DermAI:
             if not self.client:
                 response = "I'm sorry, but the AI chat service is currently unavailable. Please ensure the API key is configured properly."
             else:
-                # Get response from Groq
-                model_name = os.getenv('GROQ_MODEL', 'llama-3.1-70b-versatile')
-                try:
-                    completion = self.client.chat.completions.create(
-                        model=model_name,
-                        messages=[
-                            {"role": "system", "content": self.system_message},
-                            {"role": "user", "content": user_input}
-                        ],
-                        temperature=0.7,
-                        max_tokens=2048
-                    )
-                except Exception:
-                    # Fallback to 8b-instant
-                    completion = self.client.chat.completions.create(
-                        model="llama-3.1-8b-instant",
-                        messages=[
-                            {"role": "system", "content": self.system_message},
-                            {"role": "user", "content": user_input}
-                        ],
-                        temperature=0.7,
-                        max_tokens=2048
-                    )
+                candidate_models = [
+                    self._get_active_model(),
+                    'openai/gpt-oss-120b',
+                    'openai/gpt-oss-20b',
+                    'qwen/qwen3.8-27b',
+                    'llama-3.3-70b-versatile',
+                    'llama-3.1-8b-instant'
+                ]
+                unique_candidates = []
+                for m in candidate_models:
+                    if m and m not in unique_candidates:
+                        unique_candidates.append(m)
+
+                completion = None
+                last_err = None
+                for candidate in unique_candidates:
+                    try:
+                        completion = self.client.chat.completions.create(
+                            model=candidate,
+                            messages=[
+                                {"role": "system", "content": self.system_message},
+                                {"role": "user", "content": user_input}
+                            ],
+                            temperature=0.7,
+                            max_tokens=2048
+                        )
+                        break
+                    except Exception as err:
+                        last_err = err
+                        logger.warning(f"Failed completion with model {candidate}: {err}")
+
+                if not completion:
+                    raise last_err or Exception("All available Groq models failed.")
+
                 response = completion.choices[0].message.content
             
             # Save assistant message
