@@ -62,15 +62,28 @@ class DermAI:
                 response = "I'm sorry, but the AI chat service is currently unavailable. Please ensure the API key is configured properly."
             else:
                 # Get response from Groq
-                completion = self.client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=[
-                        {"role": "system", "content": self.system_message},
-                        {"role": "user", "content": user_input}
-                    ],
-                    temperature=0.7,
-                    max_tokens=2048
-                )
+                model_name = os.getenv('GROQ_MODEL', 'llama-3.1-70b-versatile')
+                try:
+                    completion = self.client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "system", "content": self.system_message},
+                            {"role": "user", "content": user_input}
+                        ],
+                        temperature=0.7,
+                        max_tokens=2048
+                    )
+                except Exception:
+                    # Fallback to 8b-instant
+                    completion = self.client.chat.completions.create(
+                        model="llama-3.1-8b-instant",
+                        messages=[
+                            {"role": "system", "content": self.system_message},
+                            {"role": "user", "content": user_input}
+                        ],
+                        temperature=0.7,
+                        max_tokens=2048
+                    )
                 response = completion.choices[0].message.content
             
             # Save assistant message

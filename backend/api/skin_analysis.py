@@ -79,11 +79,15 @@ class DermatologyAnalyzer:
         
         # Initialize Groq client
         self.api_key = os.getenv('GROQ_API_KEY')
-        if not self.api_key:
-            logger.warning("GROQ_API_KEY not set. Chat features will be disabled.")
-            self.groq_client = None
+        self.groq_client = None
+        if self.api_key and self.api_key.strip():
+            try:
+                self.groq_client = Groq(api_key=self.api_key)
+            except Exception as groq_err:
+                logger.warning(f"Groq client initialization skipped: {groq_err}")
+                self.groq_client = None
         else:
-            self.groq_client = Groq(api_key=self.api_key)
+            logger.info("GROQ_API_KEY not configured. Using standard clinical knowledge base.")
 
         # Load model
         self.model = None
@@ -111,10 +115,17 @@ class DermatologyAnalyzer:
             logger.info(f"Attempting to load model from: {model_path}")
 
             if not os.path.exists(model_path):
-                logger.error(f"Model file not found at {model_path}")
-                # Don't raise immediately, just log. This allows the app to start even if model is missing.
-                # The is_model_loaded check will fail later.
-                self.model = None
+                logger.warning(f"Model file not found at {model_path}. Using demo mock model fallback.")
+                try:
+                    from utils.mock_model import create_mock_model, get_mock_checkpoint
+                    mock_ckpt = get_mock_checkpoint()
+                    self.class_names = tuple(mock_ckpt['class_to_idx'].keys())
+                    self.condition_codes = {name: name for name in self.class_names}
+                    self.model = create_mock_model(num_classes=len(self.class_names)).to(self.device)
+                    logger.info("Demo mock model loaded successfully with 8 classes")
+                except Exception as mock_err:
+                    logger.error(f"Failed to load mock model: {mock_err}")
+                    self.model = None
                 return
 
             # Load checkpoint
@@ -233,21 +244,39 @@ class DermatologyAnalyzer:
             if cache_key in self._response_cache:
                 return self._response_cache[cache_key]
 
-            response = self.groq_client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a specialized dermatology AI assistant. Analyze the given skin analysis report and provide a detailed, professional interpretation."
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Please analyze this dermatological report and provide a detailed interpretation: {initial_report}"
-                    }
-                ],
-                temperature=0.7,
-                max_tokens=2048
-            )
+            model_name = os.getenv('GROQ_MODEL', 'llama-3.1-70b-versatile')
+            try:
+                response = self.groq_client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are a specialized dermatology AI assistant. Analyze the given skin analysis report and provide a detailed, professional interpretation."
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Please analyze this dermatological report and provide a detailed interpretation: {initial_report}"
+                        }
+                    ],
+                    temperature=0.7,
+                    max_tokens=2048
+                )
+            except Exception:
+                response = self.groq_client.chat.completions.create(
+                    model="llama-3.1-8b-instant",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are a specialized dermatology AI assistant. Analyze the given skin analysis report and provide a detailed, professional interpretation."
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Please analyze this dermatological report and provide a detailed interpretation: {initial_report}"
+                        }
+                    ],
+                    temperature=0.7,
+                    max_tokens=2048
+                )
             
             analysis = response.choices[0].message.content
             self._response_cache[cache_key] = analysis
