@@ -1,0 +1,180 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg: #FFFBFC;
+    --color-card: #FFFFFF;
+    --color-primary: #1A1A1A;
+    --color-secondary: #6B7280;
+    --color-accent: #DB2777;
+    --color-accent-light: #EC4899;
+    --color-border: #FCE7F3;
+    --color-highlight: #FDF2F8;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply antialiased text-gray-900;
+    background-color: var(--color-bg);
+  }
+
+  ::selection {
+    @apply bg-pink-100 text-pink-900;
+  }
+}
+
+@layer components {
+
+  /* Clean Card */
+  .card {
+    @apply bg-white rounded-lg border border-pink-100;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04);
+  }
+
+  .card:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+  }
+
+  /* Primary Button */
+  .btn-primary {
+    @apply px-5 py-2.5 rounded-lg font-medium text-white;
+    @apply bg-pink-600 hover:bg-pink-700;
+    @apply transition-colors duration-150;
+    @apply focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2;
+  }
+
+  .btn-primary:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  /* Secondary Button */
+  .btn-secondary {
+    @apply px-5 py-2.5 rounded-lg font-medium;
+    @apply bg-pink-50 text-pink-700 hover:bg-pink-100;
+    @apply transition-colors duration-150;
+  }
+
+  /* Ghost Button */
+  .btn-ghost {
+    @apply px-4 py-2 rounded-lg font-medium;
+    @apply text-gray-600 hover:text-gray-900 hover:bg-gray-100;
+    @apply transition-colors duration-150;
+  }
+
+  /* Clean Input */
+  .input {
+    @apply w-full px-4 py-2.5 rounded-lg;
+    @apply border border-pink-200 bg-white;
+    @apply text-gray-900 placeholder:text-gray-400;
+    @apply transition-colors duration-150;
+    @apply focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply bg-green-50 text-green-700;
+  }
+
+  .badge-warning {
+    @apply bg-yellow-50 text-yellow-700;
+  }
+
+  .badge-danger {
+    @apply bg-red-50 text-red-700;
+  }
+
+  .badge-info {
+    @apply bg-pink-50 text-pink-700;
+  }
+
+  /* Stat Card */
+  .stat-card {
+    @apply card p-6;
+  }
+
+  .stat-value {
+    @apply text-3xl font-semibold text-gray-900;
+  }
+
+  .stat-label {
+    @apply text-sm text-gray-500 mt-1;
+  }
+
+  /* Section */
+  .section-title {
+    @apply text-lg font-semibold text-pink-900;
+  }
+
+  .section-subtitle {
+    @apply text-sm text-pink-600;
+  }
+
+  /* Avatar */
+  .avatar {
+    @apply w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center;
+  }
+
+  .avatar-icon {
+    @apply w-5 h-5 text-pink-600;
+  }
+
+  /* Icon Container */
+  .icon-box {
+    @apply w-10 h-10 rounded-lg flex items-center justify-center;
+  }
+
+  .icon-box-pink {
+    @apply bg-pink-50 text-pink-600;
+  }
+
+  .icon-box-gray {
+    @apply bg-gray-100 text-gray-600;
+  }
+
+  /* Empty State */
+  .empty-state {
+    @apply text-center py-12;
+  }
+
+  .empty-state-icon {
+    @apply w-12 h-12 mx-auto text-pink-300 mb-4;
+  }
+
+  .empty-state-title {
+    @apply text-gray-600 font-medium;
+  }
+
+  .empty-state-text {
+    @apply text-sm text-gray-400 mt-1;
+  }
+
+  /* Loading Spinner */
+  .spinner {
+    @apply w-5 h-5 border-2 border-pink-200 border-t-pink-600 rounded-full animate-spin;
+  }
+
+  /* Skeleton */
+  .skeleton {
+    @apply bg-pink-50 rounded animate-pulse;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
