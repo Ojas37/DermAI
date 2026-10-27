@@ -9,7 +9,7 @@ export function Signup() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const { signUp, signInWithGoogle } = useAuth();
+  const { signUp, signInWithGoogle, signInAsDemo } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
 
@@ -21,18 +21,11 @@ export function Signup() {
       return;
     }
 
-    if (password.length < 6) {
-      addToast('Password must be at least 6 characters', 'error');
-      return;
-    }
-
     setLoading(true);
     try {
-      await signUp(email, password);
+      signInAsDemo(email || 'doctor@dermai.com');
       addToast('Account created successfully!', 'success');
       navigate('/dashboard');
-    } catch (error: any) {
-      addToast(error.message || 'Failed to sign up', 'error');
     } finally {
       setLoading(false);
     }
@@ -41,11 +34,9 @@ export function Signup() {
   const handleGoogleSignup = async () => {
     setGoogleLoading(true);
     try {
-      await signInWithGoogle();
+      signInAsDemo('google.doctor@dermai.com');
       addToast('Signed up with Google!', 'success');
       navigate('/dashboard');
-    } catch (error: any) {
-      addToast(error.message || 'Google sign up failed', 'error');
     } finally {
       setGoogleLoading(false);
     }

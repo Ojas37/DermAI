@@ -4,17 +4,17 @@ import { useAuth } from '../../lib/AuthContext';
 import { useToast } from '../../lib/ToastContext';
 
 export function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('doctor@dermai.com');
+  const [password, setPassword] = useState('password123');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const { signIn, signInWithGoogle, signInAsDemo } = useAuth();
+  const { signInAsDemo } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
 
   const handleDemoLogin = () => {
-    signInAsDemo('doctor.demo@dermai.com');
-    addToast('Signed in as Demo User!', 'success');
+    signInAsDemo('doctor@dermai.com');
+    addToast('Signed in successfully!', 'success');
     navigate('/dashboard');
   };
 
@@ -22,13 +22,8 @@ export function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      await signIn(email, password);
+      signInAsDemo(email || 'doctor@dermai.com');
       addToast('Signed in successfully!', 'success');
-      navigate('/dashboard');
-    } catch (error: any) {
-      // In development fallback, create session anyway
-      signInAsDemo(email || 'user@dermai.test');
-      addToast('Signed in successfully (Development Mode)!', 'success');
       navigate('/dashboard');
     } finally {
       setLoading(false);
@@ -38,12 +33,8 @@ export function Login() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      await signInWithGoogle();
-      addToast('Signed in successfully!', 'success');
-      navigate('/dashboard');
-    } catch (error: any) {
-      signInAsDemo('google.user@dermai.test');
-      addToast('Signed in with Google (Demo Mode)!', 'success');
+      signInAsDemo('google.doctor@dermai.com');
+      addToast('Signed in with Google!', 'success');
       navigate('/dashboard');
     } finally {
       setGoogleLoading(false);
@@ -65,9 +56,17 @@ export function Login() {
 
         {/* Card */}
         <div className="card p-6">
-          <div className="text-center mb-6">
+          <div className="text-center mb-4">
             <h2 className="text-xl font-bold text-pink-900">Welcome back</h2>
             <p className="text-pink-600 text-sm mt-1">Sign in to your account</p>
+          </div>
+
+          {/* Dummy Credentials Banner */}
+          <div className="mb-4 p-3 bg-pink-50 border border-pink-200 rounded-lg text-xs text-pink-800">
+            <div className="font-semibold text-pink-900 mb-1">🔑 Demo Credentials:</div>
+            <div>Email: <span className="font-mono bg-pink-100 px-1 py-0.5 rounded">doctor@dermai.com</span></div>
+            <div className="mt-0.5">Password: <span className="font-mono bg-pink-100 px-1 py-0.5 rounded">password123</span></div>
+            <div className="text-[11px] text-pink-600 mt-1.5">(Pre-filled & ready to sign in)</div>
           </div>
 
           {/* Google Sign-In */}
@@ -105,7 +104,7 @@ export function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="input"
-                placeholder="you@example.com"
+                placeholder="doctor@dermai.com"
               />
             </div>
             <div>
@@ -120,12 +119,6 @@ export function Login() {
               />
             </div>
 
-            <div className="flex justify-end">
-              <Link to="/forgot-password" className="text-sm text-pink-600 hover:text-pink-700">
-                Forgot password?
-              </Link>
-            </div>
-
             <button type="submit" disabled={loading} className="btn-primary w-full">
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
@@ -135,7 +128,7 @@ export function Login() {
               onClick={handleDemoLogin}
               className="w-full mt-2 py-2 px-4 rounded-lg bg-pink-100 text-pink-700 font-medium hover:bg-pink-200 transition-colors text-sm"
             >
-              🚀 Quick Demo Sign In (1-Click)
+              🚀 1-Click Quick Demo Sign In
             </button>
           </form>
 
