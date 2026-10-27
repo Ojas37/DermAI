@@ -151,33 +151,51 @@ class PDFReportGenerator:
         story.append(Spacer(1, 15))
 
         # ============ ANALYZED IMAGE ============
+        img_source = None
         if image_path and os.path.exists(image_path):
+            img_source = image_path
+        else:
+            # Fallback to base64 image in analysis data if file path is missing
+            b64_img = (
+                analysis_data.get('gradcam_image') or
+                analysis_data.get('visual_explanation', {}).get('explanation_image_base64') or
+                analysis_data.get('image_preview')
+            )
+            if b64_img and isinstance(b64_img, str):
+                try:
+                    if ',' in b64_img:
+                        b64_img = b64_img.split(',', 1)[1]
+                    img_source = io.BytesIO(base64.b64decode(b64_img))
+                except Exception:
+                    img_source = None
+
+        if img_source:
             story.append(Paragraph("Analyzed Image", self.styles['SectionHeader']))
             try:
-                img = Image(image_path, width=4*inch, height=3*inch)
+                img = Image(img_source, width=4*inch, height=3*inch)
                 img.hAlign = 'CENTER'
                 story.append(img)
                 story.append(Spacer(1, 15))
             except Exception as e:
-                story.append(Paragraph(f"[Image could not be loaded: {str(e)}]", self.styles['NormalText']))
+                story.append(Paragraph(f"[Image display note: {str(e)}]", self.styles['NormalText']))
 
         # ============ PRIMARY DIAGNOSIS ============
         story.append(Paragraph("Primary Diagnosis", self.styles['SectionHeader']))
         
         # Extract data
         primary = analysis_data.get('primary_analysis', {})
-        condition = primary.get('condition', analysis_data.get('predicted_condition', 'Unknown'))
-        confidence = primary.get('confidence', analysis_data.get('confidence_score', 0))
-        if isinstance(confidence, float) and confidence < 1:
+        condition = primary.get('condition', analysis_data.get('predicted_condition', analysis_data.get('primary_condition', 'Unknown')))
+        confidence = primary.get('confidence', analysis_data.get('confidence_score', analysis_data.get('confidence', 0)))
+        if isinstance(confidence, (int, float)) and confidence <= 1.0 and confidence > 0:
             confidence = confidence * 100  # Convert from decimal
         
         # Diagnosis table with confidence indicator
         conf_style = self.get_confidence_style(confidence)
         
         data = [
-            ['Detected Condition', condition],
-            ['Confidence Level', f"{confidence:.1f}%"],
-            ['Risk Assessment', self._get_risk_level(confidence)]
+            ['Detected Condition', str(condition)],
+            ['Confidence Level', f"{float(confidence):.1f}%"],
+            ['Risk Assessment', self._get_risk_level(float(confidence))]
         ]
         
         t = Table(data, colWidths=[2.2*inch, 3.3*inch])
@@ -205,24 +223,29 @@ class PDFReportGenerator:
             ('🩺 Symptoms', detailed.get('symptoms', '')),
             ('💊 Treatment Options', detailed.get('treatment', '')),
             ('🛡️ Prevention Tips', detailed.get('prevention', '')),
-            ('⚠️ When to See a Doctor', detailed.get('when_to_see_doctor', ''))
+            ('⚠️ When to See a Doctor', detailed.get('when_to_see_doctor', detailed.get('warning', '')))
         ]
         
         for title, content in sections:
             if content:
                 story.append(Paragraph(title, self.styles['SectionHeader']))
-                # Handle bullet points if content contains them
-                if '•' in content or '-' in content:
-                    lines = content.split('\n')
-                    for line in lines:
-                        line = line.strip()
-                        if line:
-                            if line.startswith('•') or line.startswith('-'):
-                                story.append(Paragraph(f"• {line.lstrip('•-').strip()}", self.styles['BulletText']))
-                            else:
-                                story.append(Paragraph(line, self.styles['NormalText']))
-                else:
-                    story.append(Paragraph(content, self.styles['NormalText']))
+                if isinstance(content, list):
+                    for item in content:
+                        if item:
+                            clean_item = str(item).lstrip('•- ').strip()
+                            story.append(Paragraph(f"• {clean_item}", self.styles['BulletText']))
+                elif isinstance(content, str):
+                    if '•' in content or '-' in content:
+                        lines = content.split('\n')
+                        for line in lines:
+                            line = line.strip()
+                            if line:
+                                if line.startswith('•') or line.startswith('-'):
+                                    story.append(Paragraph(f"• {line.lstrip('•- ').strip()}", self.styles['BulletText']))
+                                else:
+                                    story.append(Paragraph(line, self.styles['NormalText']))
+                    else:
+                        story.append(Paragraph(content, self.styles['NormalText']))
 
         # ============ DISCLAIMER ============
         story.append(Spacer(1, 30))

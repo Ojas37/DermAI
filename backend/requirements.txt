@@ -23,3 +23,4 @@ matplotlib==3.8.3
 timm==0.9.16
 firebase-admin==6.2.0
 bleach==6.1.0
+reportlab>=4.0.0
