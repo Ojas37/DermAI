@@ -31,15 +31,20 @@ class MockViTWithUncertainty(nn.Module):
         """
         batch_size = x.shape[0]
         
-        # Generate mock predictions with some randomness
-        logits = torch.randn(batch_size, self.num_classes)
+        # Initialize small background logits
+        logits = torch.randn(batch_size, self.num_classes) * 0.3
         
-        # Make one class more likely (simulate prediction)
+        # Select primary class and boost to realistic clinical confidence (88% - 96%)
         primary_class = np.random.randint(0, self.num_classes)
-        logits[0, primary_class] += 2.0  # Boost primary prediction
+        boost = 4.5 + float(np.random.uniform(0.2, 1.0))
+        logits[0, primary_class] = boost
         
-        # Generate mock uncertainty
-        uncertainty = torch.rand(batch_size, 1) * 0.3  # Low uncertainty
+        # Second most likely class gets small probability
+        secondary_class = (primary_class + 1) % self.num_classes
+        logits[0, secondary_class] = boost - 2.5
+        
+        # Low uncertainty for high-confidence predictions
+        uncertainty = torch.tensor([[0.05 + float(np.random.uniform(0.01, 0.04))]])
         
         return logits, uncertainty
 
