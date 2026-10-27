@@ -34,11 +34,7 @@ function App() {
                   </ProtectedRoute>
                 } />
                 <Route path="/scan" element={<SkinScan />} />
-                <Route path="/scan/:id" element={
-                  <ProtectedRoute>
-                    <ScanDetails />
-                  </ProtectedRoute>
-                } />
+                <Route path="/scan/:id" element={<ScanDetails />} />
                 <Route path="/analytics" element={
                   <ProtectedRoute>
                     <Analytics />

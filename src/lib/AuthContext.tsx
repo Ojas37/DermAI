@@ -17,18 +17,41 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<UserCredential | void>;
   signUp: (email: string, password: string) => Promise<UserCredential | void>;
   signInWithGoogle: () => Promise<UserCredential | void>;
+  signInAsDemo: (demoEmail?: string) => void;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function isApiKeyError(err: any): boolean {
+  if (!err) return false;
+  const code = (err.code || '').toLowerCase();
+  const message = (err.message || '').toLowerCase();
+  return (
+    code.includes('api-key') ||
+    code.includes('invalid-api-key') ||
+    message.includes('api-key') ||
+    message.includes('api key')
+  );
+}
+
+function createMockUser(email: string, name?: string): User {
+  return {
+    uid: 'demo_user_' + Math.random().toString(36).substring(2, 9),
+    email: email || 'demo@dermai.test',
+    displayName: name || (email ? email.split('@')[0] : 'Demo User'),
+    photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150',
+    emailVerified: true
+  } as unknown as User;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if there is a cached demo user in localStorage when Firebase keys are not configured
+    // Check if there is a cached demo user in localStorage
     const demoUserJson = localStorage.getItem('derm_ai_demo_user');
     let hasLocalDemoUser = false;
     if (demoUserJson) {
@@ -54,25 +77,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
+  const signInAsDemo = (demoEmail: string = 'demo@dermai.test') => {
+    const mock = createMockUser(demoEmail, 'Demo Dermatologist');
+    setUser(mock);
+    localStorage.setItem('derm_ai_demo_user', JSON.stringify(mock));
+  };
+
   const signIn = async (email: string, password: string) => {
     try {
       return await signInWithEmailAndPassword(auth, email, password);
     } catch (err: any) {
-      // If Firebase API key is invalid or not configured yet, allow demo login
-      if (
-        err?.code === 'auth/invalid-api-key' ||
-        err?.code === 'auth/api-key-not-valid.invalid-api-key' ||
-        err?.message?.includes('API key not valid')
-      ) {
-        const mockUser = {
-          uid: 'demo_user_' + Math.random().toString(36).substring(2, 9),
-          email,
-          displayName: email.split('@')[0],
-          photoURL: null,
-          emailVerified: true
-        } as unknown as User;
-        setUser(mockUser);
-        localStorage.setItem('derm_ai_demo_user', JSON.stringify(mockUser));
+      if (isApiKeyError(err)) {
+        const mock = createMockUser(email);
+        setUser(mock);
+        localStorage.setItem('derm_ai_demo_user', JSON.stringify(mock));
         return;
       }
       throw err;
@@ -83,20 +101,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       return await createUserWithEmailAndPassword(auth, email, password);
     } catch (err: any) {
-      if (
-        err?.code === 'auth/invalid-api-key' ||
-        err?.code === 'auth/api-key-not-valid.invalid-api-key' ||
-        err?.message?.includes('API key not valid')
-      ) {
-        const mockUser = {
-          uid: 'demo_user_' + Math.random().toString(36).substring(2, 9),
-          email,
-          displayName: email.split('@')[0],
-          photoURL: null,
-          emailVerified: true
-        } as unknown as User;
-        setUser(mockUser);
-        localStorage.setItem('derm_ai_demo_user', JSON.stringify(mockUser));
+      if (isApiKeyError(err)) {
+        const mock = createMockUser(email);
+        setUser(mock);
+        localStorage.setItem('derm_ai_demo_user', JSON.stringify(mock));
         return;
       }
       throw err;
@@ -107,20 +115,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       return await signInWithPopup(auth, googleProvider);
     } catch (err: any) {
-      if (
-        err?.code === 'auth/invalid-api-key' ||
-        err?.code === 'auth/api-key-not-valid.invalid-api-key' ||
-        err?.message?.includes('API key not valid')
-      ) {
-        const mockUser = {
-          uid: 'demo_google_user_123',
-          email: 'demo@dermai.test',
-          displayName: 'Demo User',
-          photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150',
-          emailVerified: true
-        } as unknown as User;
-        setUser(mockUser);
-        localStorage.setItem('derm_ai_demo_user', JSON.stringify(mockUser));
+      if (isApiKeyError(err)) {
+        const mock = createMockUser('google.user@dermai.test', 'Google User');
+        setUser(mock);
+        localStorage.setItem('derm_ai_demo_user', JSON.stringify(mock));
         return;
       }
       throw err;
@@ -141,12 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await sendPasswordResetEmail(auth, email);
     } catch (err: any) {
-      if (
-        err?.code === 'auth/invalid-api-key' ||
-        err?.code === 'auth/api-key-not-valid.invalid-api-key' ||
-        err?.message?.includes('API key not valid')
-      ) {
-        // Mock successful email sending in dev mode
+      if (isApiKeyError(err)) {
         return;
       }
       throw err;
@@ -161,6 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signUp,
         signInWithGoogle,
+        signInAsDemo,
         signOut,
         resetPassword
       }}
