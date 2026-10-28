@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Video, Calendar, MessageSquare, Search, ExternalLink, Image as ImageIcon, Activity, AlertCircle, CheckCircle, Clock } from 'lucide-react';
-import { DashboardCard } from './DashboardCard';
+import { Search, ExternalLink, Image as ImageIcon, Activity, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+
 import { useService } from '../../lib/ServiceContext';
 import { useAuth } from '../../lib/AuthContext';
 import { API_BASE_URL } from '../../lib/config';
@@ -251,13 +251,6 @@ export function Dashboard() {
           )}
         </div>
 
-        {/* Services */}
-        <h2 className="section-title mb-4">Services</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <DashboardCard title="Video Consultation" description="Schedule a video call" icon={Video} price="$30" time="30 min" />
-          <DashboardCard title="Clinic Visit" description="Book an appointment" icon={Calendar} price="$50" time="45 min" />
-          <DashboardCard title="Quick Chat" description="Text consultation" icon={MessageSquare} price="$15" time="15 min" />
-        </div>
       </div>
     </div>
   );
